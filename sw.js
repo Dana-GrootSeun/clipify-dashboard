@@ -1,5 +1,5 @@
 // ponytail: cache-first for the shell so the app opens offline; API calls always hit network.
-const CACHE = "clipify-v5";
+const CACHE = "clipify-v6";
 const SHELL = ["./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
@@ -11,7 +11,12 @@ self.addEventListener("activate", e => {
 });
 self.addEventListener("fetch", e => {
   const url = e.request.url;
-  // never cache API / video: always fresh, and they don't belong in the shell
+  // never touch API / video: always fresh, and they don't belong in the shell
   if (url.includes("googleapis.com") || url.endsWith(".mp4")) return;
-  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+  // network-first: online always gets the latest; cache is only the offline fallback.
+  e.respondWith(
+    fetch(e.request)
+      .then(r => { caches.open(CACHE).then(c => c.put(e.request, r.clone())); return r; })
+      .catch(() => caches.match(e.request))
+  );
 });
