@@ -1,5 +1,5 @@
 // ponytail: cache-first for the shell so the app opens offline; API calls always hit network.
-const CACHE = "clipify-v4";
+const CACHE = "clipify-v5";
 const SHELL = ["./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
