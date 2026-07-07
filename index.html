@@ -159,7 +159,7 @@ const DEMO={
   }))
 };
 
-let chart;
+let chart, CUR_VIDS=[];
 function renderKpis(cur,prev){
   const rows=[
     ["Subscribers",cur.subs,prev?.subs],
@@ -188,12 +188,23 @@ function renderVids(vids){
 function renderChart(snaps){
   const box=$("#growth").parentElement;
   if(chart){chart.destroy();chart=null;}
-  // ponytail: <2 days of snapshots = nothing to trend yet; show a friendly note instead of a lonely dot.
+  // ponytail: <2 days of snapshots = no trend yet. Show real per-video views instead of a lonely dot.
   if(snaps.length<2){
-    box.innerHTML=`<div style="display:flex;height:100%;align-items:center;justify-content:center;
-      text-align:center;color:var(--dim);font-size:14px;padding:20px">
-      📈 Growth chart starts building tomorrow.<br>Open the app once a day — it saves a snapshot each time,<br>
-      then plots your subs & views trend.</div>`;
+    const vids=(CUR_VIDS||[]).slice().reverse(); // oldest→newest
+    if(!vids.length){
+      box.innerHTML=`<div style="display:flex;height:100%;align-items:center;justify-content:center;
+        text-align:center;color:var(--dim);font-size:14px;padding:20px">
+        📈 Trend line builds as you check in daily — open the app once a day and it plots your subs & views.</div>`;
+      return;
+    }
+    box.innerHTML='<canvas id="growth"></canvas>';
+    chart=new Chart($("#growth"),{type:"bar",data:{
+      labels:vids.map(v=>v.title.length>22?v.title.slice(0,22)+"…":v.title),
+      datasets:[{label:"Views",data:vids.map(v=>v.views),backgroundColor:"#7c5cff"}]},
+      options:{maintainAspectRatio:false,plugins:{legend:{display:false},
+        title:{display:true,text:"Views per recent upload",color:"#8b94a7"}},
+        scales:{x:{ticks:{color:"#8b94a7",maxRotation:60,minRotation:30,font:{size:10}},grid:{display:false}},
+          y:{ticks:{color:"#8b94a7"},grid:{color:"#232a3a"},beginAtZero:true}}}});
     return;
   }
   if(!box.querySelector("canvas"))box.innerHTML='<canvas id="growth"></canvas>';
@@ -230,6 +241,7 @@ function paint(data,snaps,isDemo){
   const prev=snaps.length>1?snaps[snaps.length-2]:null;
   renderKpis({subs:data.subs,views:data.views,videos:data.videos},
              prev&&{subs:prev.subs,views:prev.views,videos:data.videos});
+  CUR_VIDS=data.vids||[];
   renderVids(data.vids); renderChart(snaps);
 }
 
