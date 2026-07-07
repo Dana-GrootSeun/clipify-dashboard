@@ -41,7 +41,7 @@
   section{margin-top:28px}
   h2{font-size:16px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin:0 0 16px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px}
-  .chartbox{height:400px}
+  .chartbox{height:240px}
   table{width:100%;border-collapse:collapse;font-size:15px}
   th,td{text-align:left;padding:13px 10px;border-bottom:1px solid var(--line)}
   th{color:var(--dim);font-weight:600;font-size:13px}
@@ -186,7 +186,18 @@ function renderVids(vids){
   </tr>`).join("")||`<tr><td class="empty" colspan="4">No uploads yet.</td></tr>`;
 }
 function renderChart(snaps){
-  const ctx=$("#growth"); if(chart)chart.destroy();
+  const box=$("#growth").parentElement;
+  if(chart){chart.destroy();chart=null;}
+  // ponytail: <2 days of snapshots = nothing to trend yet; show a friendly note instead of a lonely dot.
+  if(snaps.length<2){
+    box.innerHTML=`<div style="display:flex;height:100%;align-items:center;justify-content:center;
+      text-align:center;color:var(--dim);font-size:14px;padding:20px">
+      📈 Growth chart starts building tomorrow.<br>Open the app once a day — it saves a snapshot each time,<br>
+      then plots your subs & views trend.</div>`;
+    return;
+  }
+  if(!box.querySelector("canvas"))box.innerHTML='<canvas id="growth"></canvas>';
+  const ctx=$("#growth");
   chart=new Chart(ctx,{type:"line",data:{
     labels:snaps.map(s=>s.d.slice(5)),
     datasets:[
