@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Clipify — Channel Dashboard</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#0b0d12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Clipify">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  :root{
+    --bg:#0b0d12;--panel:#141821;--panel2:#1b2130;--line:#232a3a;
+    --txt:#e6e9ef;--dim:#8b94a7;--accent:#7c5cff;--live:#2ecc71;--sched:#f5a623;--red:#ff5470;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  a{color:var(--accent);text-decoration:none}
+  header{padding:24px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  header img{width:52px;height:52px;border-radius:50%;background:var(--panel2)}
+  h1{margin:0;font-size:20px;letter-spacing:-.02em}
+  .sub{color:var(--dim);font-size:13px}
+  .spacer{flex:1}
+  button{cursor:pointer;font:inherit;font-size:13px;font-weight:600;
+    background:var(--panel2);color:var(--txt);border:1px solid var(--line);
+    border-radius:9px;padding:9px 14px;transition:.15s}
+  button:hover{border-color:var(--accent);color:#fff}
+  button.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .wrap{max-width:1180px;margin:0 auto;padding:22px 24px 70px}
+  .kpis{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .kpi b{display:block;font-size:28px;letter-spacing:-.02em}
+  .kpi span{color:var(--dim);font-size:12px}
+  .kpi .delta{font-size:12px;font-weight:600}
+  .delta.up{color:var(--live)} .delta.down{color:var(--red)} .delta.flat{color:var(--dim)}
+  section{margin-top:28px}
+  h2{font-size:15px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin:0 0 14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .chartbox{height:300px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line)}
+  th{color:var(--dim);font-weight:600;font-size:12px}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .thumb{width:64px;height:36px;border-radius:6px;object-fit:cover;background:#000}
+  .vtitle{display:flex;align-items:center;gap:10px}
+  .pipe{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .clip{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .clip video{width:100%;aspect-ratio:9/16;object-fit:contain;background:#000;display:block;max-height:260px}
+  .clip .meta{padding:8px 10px;font-size:12px}
+  .badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px}
+  .badge.live{color:var(--live);background:#2ecc7122}
+  .badge.sched{color:var(--sched);background:#f5a62322}
+  .empty{color:var(--dim);font-size:13px;padding:14px 0}
+  dialog{background:var(--panel);color:var(--txt);border:1px solid var(--line);
+    border-radius:16px;padding:24px;max-width:440px;width:92%}
+  dialog::backdrop{background:#000a}
+  dialog h3{margin:0 0 4px}
+  dialog p{color:var(--dim);font-size:13px;margin:0 0 16px}
+  dialog label{display:block;font-size:12px;color:var(--dim);margin:12px 0 5px}
+  dialog input{width:100%;background:var(--bg);border:1px solid var(--line);
+    color:var(--txt);border-radius:9px;padding:10px;font:inherit}
+  dialog .actions{display:flex;gap:10px;margin-top:20px}
+  .banner{background:#f5a62318;border:1px solid #f5a62355;color:#f5cf8a;
+    border-radius:12px;padding:12px 16px;font-size:13px;margin-bottom:18px}
+  ol{margin:8px 0 0;padding-left:18px;font-size:12px;color:var(--dim);line-height:1.7}
+</style>
+</head>
+<body>
+<header>
+  <img id="avatar" alt="">
+  <div>
+    <h1 id="chName">Clipify — Channel Dashboard</h1>
+    <div class="sub" id="chSub">Demo data · add your channel to go live</div>
+  </div>
+  <div class="spacer"></div>
+  <button id="installBtn" style="display:none">⬇ Install app</button>
+  <button id="refreshBtn">↻ Refresh</button>
+  <button class="pri" id="settingsBtn">⚙ Channel</button>
+</header>
+
+<div class="wrap">
+  <div class="banner" id="demoBanner">
+    Showing <b>demo numbers</b>. Click <b>⚙ Channel</b> and paste a free YouTube API key + your channel to load real stats.
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section>
+    <h2>Growth (subscribers & views over time)</h2>
+    <div class="card"><div class="chartbox"><canvas id="growth"></canvas></div></div>
+  </section>
+
+  <section>
+    <h2>Recent uploads — viewership</h2>
+    <div class="card"><table id="vidTable"><thead><tr>
+      <th>Video</th><th class="num">Views</th><th class="num">Likes</th><th class="num">Published</th>
+    </tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section>
+    <h2>Clips being made — current series</h2>
+    <div class="pipe" id="pipe"></div>
+  </section>
+</div>
+
+<dialog id="settings">
+  <h3>Connect your channel</h3>
+  <p>Stored only in this browser. Free, no backend.</p>
+  <label>YouTube Data API key</label>
+  <input id="apiKey" placeholder="AIza...">
+  <label>Channel ID or @handle</label>
+  <input id="chId" placeholder="UCxxxx… or @yourhandle">
+  <ol>
+    <li>console.cloud.google.com → new project (free)</li>
+    <li>Enable "YouTube Data API v3"</li>
+    <li>Credentials → Create API key → paste above</li>
+  </ol>
+  <div class="actions">
+    <button class="pri" id="saveBtn" style="flex:1">Save & load</button>
+    <button id="closeBtn">Cancel</button>
+  </div>
+</dialog>
+
+<script>
+const $=s=>document.querySelector(s);
+const nf=n=>Intl.NumberFormat("en",{notation:n>=1e4?"compact":"standard",maximumFractionDigits:1}).format(n);
+const LS_CFG="clipify_cfg", LS_SNAP="clipify_snaps";
+
+// ---- current Clipify series (real local production) ----
+const SERIES={start:"2026-07-04T11:00:00+02:00",parts:11,dir:"../clipify_out"};
+function renderPipe(){
+  const now=new Date(), out=[];
+  for(let i=0;i<SERIES.parts;i++){
+    const n=i+1, pub=new Date(+new Date(SERIES.start)+i*3600e3), isLive=pub<=now;
+    out.push(`<div class="clip">
+      <video src="${SERIES.dir}/part_${String(n).padStart(2,"0")}.mp4" preload="metadata" controls playsinline onerror="this.style.display='none'"></video>
+      <div class="meta"><b>Part ${n}/${SERIES.parts}</b>
+      <span class="badge ${isLive?"live":"sched"}">${isLive?"LIVE":"SCHED"}</span></div>
+    </div>`);
+  }
+  $("#pipe").innerHTML=out.join("");
+}
+
+// ---- demo data (until channel connected) ----
+const DEMO={
+  name:"Your Channel (demo)", subs:1240, views:86500, videos:47, avatar:"",
+  vids:Array.from({length:8},(_,i)=>({
+    title:`Chunk Deletion — Part ${i+1}/11`, views:3200-i*310, likes:210-i*18,
+    date:new Date(Date.now()-i*864e5).toISOString(), id:"", thumb:""
+  })),
+  snaps:Array.from({length:14},(_,i)=>({
+    d:new Date(Date.now()-(13-i)*864e5).toISOString().slice(0,10),
+    subs:1050+i*14+Math.round(Math.sin(i)*8), views:70000+i*1250
+  }))
+};
+
+let chart;
+function renderKpis(cur,prev){
+  const rows=[
+    ["Subscribers",cur.subs,prev?.subs],
+    ["Total views",cur.views,prev?.views],
+    ["Videos",cur.videos,prev?.videos],
+    ["Avg views/video",Math.round(cur.views/Math.max(cur.videos,1)),
+      prev?Math.round(prev.views/Math.max(prev.videos,1)):null],
+  ];
+  $("#kpis").innerHTML=rows.map(([l,v,p])=>{
+    let d="";
+    if(p!=null){const diff=v-p;const cls=diff>0?"up":diff<0?"down":"flat";
+      d=`<div class="delta ${cls}">${diff>0?"▲":diff<0?"▼":"■"} ${nf(Math.abs(diff))}</div>`;}
+    return `<div class="kpi"><b>${nf(v)}</b><span>${l}</span>${d}</div>`;
+  }).join("");
+}
+function renderVids(vids){
+  $("#vidTable tbody").innerHTML=vids.map(v=>`<tr>
+    <td><div class="vtitle">
+      ${v.thumb?`<img class="thumb" src="${v.thumb}">`:`<div class="thumb"></div>`}
+      ${v.id?`<a href="https://youtu.be/${v.id}" target="_blank">${v.title}</a>`:v.title}
+    </div></td>
+    <td class="num">${nf(v.views)}</td><td class="num">${nf(v.likes)}</td>
+    <td class="num">${new Date(v.date).toLocaleDateString()}</td>
+  </tr>`).join("")||`<tr><td class="empty" colspan="4">No uploads yet.</td></tr>`;
+}
+function renderChart(snaps){
+  const ctx=$("#growth"); if(chart)chart.destroy();
+  chart=new Chart(ctx,{type:"line",data:{
+    labels:snaps.map(s=>s.d.slice(5)),
+    datasets:[
+      {label:"Subscribers",data:snaps.map(s=>s.subs),borderColor:"#7c5cff",backgroundColor:"#7c5cff22",yAxisID:"y",tension:.3,fill:true},
+      {label:"Views",data:snaps.map(s=>s.views),borderColor:"#2ecc71",yAxisID:"y1",tension:.3}
+    ]},options:{maintainAspectRatio:false,plugins:{legend:{labels:{color:"#8b94a7"}}},
+    scales:{
+      x:{ticks:{color:"#8b94a7"},grid:{color:"#232a3a"}},
+      y:{position:"left",ticks:{color:"#7c5cff"},grid:{color:"#232a3a"},title:{display:true,text:"Subs",color:"#7c5cff"}},
+      y1:{position:"right",ticks:{color:"#2ecc71"},grid:{display:false},title:{display:true,text:"Views",color:"#2ecc71"}}
+    }}});
+}
+
+// ---- growth snapshots: one per day in this browser ----
+function pushSnap(cur){
+  const snaps=JSON.parse(localStorage.getItem(LS_SNAP)||"[]");
+  const today=new Date().toISOString().slice(0,10);
+  const rec={d:today,subs:cur.subs,views:cur.views};
+  const i=snaps.findIndex(s=>s.d===today);
+  if(i>=0)snaps[i]=rec; else snaps.push(rec);
+  localStorage.setItem(LS_SNAP,JSON.stringify(snaps));
+  return snaps;
+}
+
+function paint(data,snaps,isDemo){
+  $("#demoBanner").style.display=isDemo?"":"none";
+  $("#chName").textContent=data.name;
+  $("#chSub").textContent=isDemo?"Demo data · add your channel to go live":"Live · YouTube Data API";
+  if(data.avatar)$("#avatar").src=data.avatar;
+  const prev=snaps.length>1?snaps[snaps.length-2]:null;
+  renderKpis({subs:data.subs,views:data.views,videos:data.videos},
+             prev&&{subs:prev.subs,views:prev.views,videos:data.videos});
+  renderVids(data.vids); renderChart(snaps);
+}
+
+async function loadLive(cfg){
+  const api="https://www.googleapis.com/youtube/v3/";
+  const key=cfg.key;
+  let id=cfg.id.trim();
+  // resolve @handle → channel id
+  if(id.startsWith("@")){
+    const r=await(await fetch(`${api}channels?part=id&forHandle=${encodeURIComponent(id)}&key=${key}`)).json();
+    if(r.error)throw r.error; id=r.items?.[0]?.id; if(!id)throw{message:"Handle not found"};
+  }
+  const ch=await(await fetch(`${api}channels?part=snippet,statistics,contentDetails&id=${id}&key=${key}`)).json();
+  if(ch.error)throw ch.error;
+  const c=ch.items?.[0]; if(!c)throw{message:"Channel not found"};
+  const uploads=c.contentDetails.relatedPlaylists.uploads;
+  const pl=await(await fetch(`${api}playlistItems?part=contentDetails&maxResults=15&playlistId=${uploads}&key=${key}`)).json();
+  const ids=(pl.items||[]).map(i=>i.contentDetails.videoId).join(",");
+  let vids=[];
+  if(ids){
+    const vr=await(await fetch(`${api}videos?part=snippet,statistics&id=${ids}&key=${key}`)).json();
+    vids=(vr.items||[]).map(v=>({title:v.snippet.title,views:+v.statistics.viewCount||0,
+      likes:+v.statistics.likeCount||0,date:v.snippet.publishedAt,id:v.id,
+      thumb:v.snippet.thumbnails?.default?.url||""}));
+  }
+  return {name:c.snippet.title,avatar:c.snippet.thumbnails?.default?.url||"",
+    subs:+c.statistics.subscriberCount||0,views:+c.statistics.viewCount||0,
+    videos:+c.statistics.videoCount||0,vids};
+}
+
+async function boot(){
+  renderPipe();
+  const cfg=JSON.parse(localStorage.getItem(LS_CFG)||"null");
+  if(cfg?.key&&cfg?.id){
+    try{
+      const data=await loadLive(cfg);
+      const snaps=pushSnap(data);
+      paint(data,snaps,false);
+      return;
+    }catch(e){
+      $("#chSub").textContent="⚠ "+(e.message||"API error")+" — showing demo";
+    }
+  }
+  paint(DEMO,DEMO.snaps,true);
+}
+
+// ---- settings dialog ----
+$("#settingsBtn").onclick=()=>{
+  const cfg=JSON.parse(localStorage.getItem(LS_CFG)||"null");
+  if(cfg){$("#apiKey").value=cfg.key;$("#chId").value=cfg.id;}
+  $("#settings").showModal();
+};
+$("#closeBtn").onclick=()=>$("#settings").close();
+$("#saveBtn").onclick=()=>{
+  const key=$("#apiKey").value.trim(),id=$("#chId").value.trim();
+  if(!key||!id){alert("Need both fields");return;}
+  localStorage.setItem(LS_CFG,JSON.stringify({key,id}));
+  $("#settings").close(); boot();
+};
+$("#refreshBtn").onclick=boot;
+boot();
+
+// ---- PWA: installable app ----
+let deferredPrompt;
+window.addEventListener("beforeinstallprompt",e=>{
+  e.preventDefault(); deferredPrompt=e; $("#installBtn").style.display="";
+});
+$("#installBtn").onclick=async()=>{
+  if(!deferredPrompt)return;
+  deferredPrompt.prompt(); await deferredPrompt.userChoice;
+  deferredPrompt=null; $("#installBtn").style.display="none";
+};
+if("serviceWorker" in navigator)
+  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+</script>
+</body>
+</html>
